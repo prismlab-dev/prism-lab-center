@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/* Prisma palette, lifted from the Prism app: neutral surfaces, colour lives in marks. */
+@theme {
+  --font-sans: "Spline Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, monospace;
+  --color-canvas: #0e0e10;
+  --color-surface: #111;
+  --color-raised: #161618;
+  --color-iris: #9b8cff;
+  --color-lagoon: #3dd6c3;
+  --color-azure: #5cb8ff;
+  --color-coral: #ff7b8a;
+  --color-saffron: #f7c04a;
+  --color-orchid: #e58ad6;
+  --color-ink-2: #9d9d9f;
+  --color-ink-3: #78787b;
+  --color-ink-4: #58585b;
+  --color-line: #2a2a2f;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+:root {
+  color-scheme: dark;
+  background: var(--color-canvas);
+  color: #fff;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+*:focus-visible { outline: 2px solid var(--color-iris); outline-offset: 3px; border-radius: 12px; }
+::selection { background: rgb(155 140 255 / .35); }
+
+/* Hero: the name alone, light and widely spaced. */
+.hero-title { font-family: "Firjar", sans-serif; font-size: clamp(2.5rem, 7vw, 6rem); font-weight: 300; line-height: 1; letter-spacing: .18em; text-transform: uppercase; margin-right: -.18em;
+  color: #fff;
+  /* Hairline red/blue fringe on the edges, like light just off-axis through glass. */
+  filter: drop-shadow(-.6px 0 rgb(255 45 85 / .55)) drop-shadow(.6px 0 rgb(61 92 255 / .55)); }
+/* Atom standing in for the A of LABS: sized to the cap height, stroke matched to the 300 stem, same tracking after it. */
+/* Glitch channels: copies of the title laid over it, only shown in brief torn slices. */
+.glitch { position: absolute; inset: 0; opacity: 0; pointer-events: none; background: none; filter: none; mix-blend-mode: screen; }
+.gl-a { color: #ff2d55; } .gl-b { color: #00e5ff; }
+.glitch .atom-a { color: inherit; }
+.hero-names { font-size: .75rem; letter-spacing: .28em; text-transform: uppercase; color: #fff; }
+
+/* Code field: dim copy always on, lit copy (Prism syntax colours) only inside the pointer's spotlight. */
+.code-field { position: absolute; inset: -88px 0 0; overflow: hidden; pointer-events: none;
+  /* Clear under the nav so it reads cleanly, fades out toward the bottom, and thins out right behind the name so the title keeps focus. */
+  mask-image: linear-gradient(transparent, rgb(0 0 0 / .2) 9%, #000 22%, rgb(0 0 0 / .35) 65%, transparent), radial-gradient(ellipse 38% 26% at 50% 50%, rgb(0 0 0 / .3), #000);
+  mask-composite: intersect; }
+.code-dim { position: absolute; inset: 0; margin: 0 0 0 -6rem; padding: 1rem 0 0; overflow: hidden;
+  font: 400 13px/1.75 var(--font-mono); white-space: pre; color: rgb(255 255 255 / .055); }
+/* Lit words: hue comes from the word's position on screen (--h), so the field reads as one spectrum.
+   Quick to light, slow to fade, which leaves a soft trail instead of a hard-edged circle. */
+.code-dim .w { transition: color 1.2s ease, text-shadow 1.2s ease; }
+.code-dim .w[data-on] { transition-duration: .15s; }
+.code-dim .w[data-on="1"] { color: hsl(var(--h) 35% 66% / .35); }
+.code-dim .w[data-on="2"] { color: hsl(var(--h) 45% 72% / .8); text-shadow: 0 0 10px hsl(var(--h) 45% 60% / .25); }
+@media (max-width: 767px) { .code-dim { font-size: 11px; } }
+
+.atom-a { display: inline-block; width: .8em; height: .8em; margin: 0 .03em 0 .06em; vertical-align: -.1em; color: #fff; }
+
+/* Project showcase: a mock of each product floating in 3D, tinted by its own colour of the spectrum. */
+.stage { perspective: 1400px; padding: 2rem 0; }
+.device { position: relative; transform-style: preserve-3d; transform: rotateX(10deg) rotateY(var(--tilt)); }
+.window { border-radius: 18px; border: 1px solid rgb(255 255 255 / .08); background: linear-gradient(var(--color-raised), #121214);
+  box-shadow: 0 40px 80px -20px rgb(0 0 0 / .7), 0 0 0 1px rgb(from var(--accent) r g b / .08), inset 0 1px rgb(255 255 255 / .06); overflow: hidden; }
+.float { position: absolute; transform: translateZ(70px); border-radius: 14px; padding: .85rem 1rem; border: 1px solid rgb(255 255 255 / .1);
+  background: rgb(22 22 24 / .85); backdrop-filter: blur(12px); box-shadow: 0 24px 48px -12px rgb(0 0 0 / .8); }
+.halo { position: absolute; inset: 15% 10%; border-radius: 50%; background: var(--accent); opacity: .2; filter: blur(80px); }
+/* Project icon with depth in the glyph itself: a lit gradient stroke (set in the SVG), extruded by stacking
+   1px drop-shadows in darker shades of the project colour, then a soft cast shadow and a faint coloured glow. */
+.icon-3d { position: relative; display: inline-block; }
+.icon-3d svg:last-child, .title-3d { overflow: visible; filter:
+  drop-shadow(1px 1px 0 color-mix(in oklab, var(--accent) 50%, #000))
+  drop-shadow(.5px .5px 0 color-mix(in oklab, var(--accent) 35%, #000))
+  drop-shadow(2px 5px 6px rgb(0 0 0 / .4))
+  drop-shadow(0 0 14px rgb(from var(--accent) r g b / .18)); }
+/* Same relief on the project name: the lit gradient goes in the glyph fill, the extrusion filter is shared above. */
+.title-3d { padding-bottom: .08em; color: transparent; -webkit-background-clip: text; background-clip: text;
+  background-image: linear-gradient(180deg, color-mix(in oklab, var(--accent) 35%, #fff) 5%, var(--accent) 55%, color-mix(in oklab, var(--accent) 70%, #000) 100%); }
+.project + .project { border-top: 1px solid var(--color-line); }
+@media (max-width: 767px) { .device { transform: rotateX(6deg); } .float { display: none; } }
+
+.team { transition: color .2s ease, background-color .2s ease; }
+.cta, .tool, .chip { transition: border-color .25s ease, background-color .25s ease, transform .15s var(--ease-out); }
+.arrow { transition: transform .25s var(--ease-out); }
+.cta:active, .tool:active, .chip:active { transform: scale(.99); }
+@media (hover: hover) and (pointer: fine) {
+  .team:hover { color: #fff; background-color: rgb(255 255 255 / .06); }
+  .tool:hover, .chip:hover { border-color: #3a3a40; background-color: var(--color-raised); }
+  .group:hover .arrow { transform: translate(2px, -2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrow { transition: none; }
+  .cta:active, .tool:active, .chip:active { transform: none; }
+}
