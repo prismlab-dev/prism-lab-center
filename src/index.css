@@ -33,14 +33,17 @@
 
 /* Hero: the name alone, light and widely spaced. */
 .hero-title { font-family: "Firjar", sans-serif; font-size: clamp(2.5rem, 7vw, 6rem); font-weight: 300; line-height: 1; letter-spacing: .18em; text-transform: uppercase; margin-right: -.18em;
-  color: #fff;
+  position: relative; z-index: 1; color: #fff;
   /* Hairline red/blue fringe on the edges, like light just off-axis through glass. */
   filter: drop-shadow(-.6px 0 rgb(255 45 85 / .55)) drop-shadow(.6px 0 rgb(61 92 255 / .55)); }
 /* Atom standing in for the A of LABS: sized to the cap height, stroke matched to the 300 stem, same tracking after it. */
 /* Glitch channels: copies of the title laid over it, only shown in brief torn slices. */
-.glitch { position: absolute; inset: 0; opacity: 0; pointer-events: none; background: none; filter: none; mix-blend-mode: screen; }
+.glitch { position: absolute; z-index: 2; inset: 0; opacity: 0; pointer-events: none; background: none; filter: none; mix-blend-mode: screen; }
 .gl-a { color: #ff2d55; } .gl-b { color: #00e5ff; }
 .glitch .atom-a { color: inherit; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+.project { scroll-margin-top: 2rem; }
 .hero-names { font-size: .75rem; letter-spacing: .28em; text-transform: uppercase; color: #fff; }
 
 /* Code field: dim copy always on, lit copy (Prism syntax colours) only inside the pointer's spotlight. */
@@ -50,12 +53,12 @@
   mask-composite: intersect; }
 .code-dim { position: absolute; inset: 0; margin: 0 0 0 -6rem; padding: 1rem 0 0; overflow: hidden;
   font: 400 13px/1.75 var(--font-mono); white-space: pre; color: rgb(255 255 255 / .055); }
-/* Lit words: hue comes from the word's position on screen (--h), so the field reads as one spectrum.
+/* Lit words: plain white under the pointer, so only the prism adds colour.
    Quick to light, slow to fade, which leaves a soft trail instead of a hard-edged circle. */
-.code-dim .w { transition: color 1.2s ease, text-shadow 1.2s ease; }
+.code-dim .w { transition: color 1.2s ease; }
 .code-dim .w[data-on] { transition-duration: .15s; }
-.code-dim .w[data-on="1"] { color: hsl(var(--h) 35% 66% / .35); }
-.code-dim .w[data-on="2"] { color: hsl(var(--h) 45% 72% / .8); text-shadow: 0 0 10px hsl(var(--h) 45% 60% / .25); }
+.code-dim .w[data-on="1"] { color: rgb(255 255 255 / .3); }
+.code-dim .w[data-on="2"] { color: rgb(255 255 255 / .75); }
 @media (max-width: 767px) { .code-dim { font-size: 11px; } }
 
 .atom-a { display: inline-block; width: .8em; height: .8em; margin: 0 .03em 0 .06em; vertical-align: -.1em; color: #fff; }
@@ -83,16 +86,44 @@
 @media (max-width: 767px) { .device { transform: rotateX(6deg); } .float { display: none; } }
 
 .team { transition: color .2s ease, background-color .2s ease; }
-.cta, .tool, .chip { transition: border-color .25s ease, background-color .25s ease, transform .15s var(--ease-out); }
+.cta, .tool { transition: border-color .25s ease, background-color .25s ease, transform .15s var(--ease-out); }
 .arrow { transition: transform .25s var(--ease-out); }
-.cta:active, .tool:active, .chip:active { transform: scale(.99); }
+.cta:active, .tool:active { transform: scale(.99); }
 @media (hover: hover) and (pointer: fine) {
   .team:hover { color: #fff; background-color: rgb(255 255 255 / .06); }
-  .tool:hover, .chip:hover { border-color: #3a3a40; background-color: var(--color-raised); }
+  .tool:hover { border-color: #3a3a40; background-color: var(--color-raised); }
   .group:hover .arrow { transform: translate(2px, -2px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .arrow { transition: none; }
-  .cta:active, .tool:active, .chip:active { transform: none; }
+  .cta:active, .tool:active { transform: none; }
 }
+
+/* Prism (WebGL, see Prism): same box as the code field so both share pixel coordinates, running a little past the
+   hero's foot and fading there. Screen-blended over the code, so its black leaves the code as it is. */
+.prism-gl { position: absolute; left: 0; top: -88px; width: 100%; height: calc(100% + 88px + 12rem); pointer-events: none;
+  mix-blend-mode: screen; mask-image: linear-gradient(#000 calc(100% - 16rem), transparent); }
+
+/* Between the code and the prism canvas: the code seen through the glass (outline and points set by Prism as --clip, --base,
+   --e entry, --x exit, --r prism height). A light blur everywhere, a deeper one toward the thick base, then the glass's light:
+   dimmed overall like dark glass, warm where the white light enters, cooler where the spectrum leaves. */
+.prism-blur { position: absolute; left: 0; top: -88px; width: 100%; height: calc(100% + 88px); pointer-events: none; }
+.prism-blur i { position: absolute; inset: 0; clip-path: var(--clip, polygon(0 0)); }
+/* Chromium applies the Figma-style glass (#prism-glass in Prism); Safari falls back to a plain frost. Brightened so the dim code reads through. */
+.prism-blur i { -webkit-backdrop-filter: blur(5px) brightness(2); backdrop-filter: url(#prism-glass) brightness(2);
+  background:
+    radial-gradient(circle calc(var(--r, 200px) * .35) at var(--e, 0 0), rgb(255 248 240 / calc(var(--lit, 1) * .12)), transparent),
+    radial-gradient(circle calc(var(--r, 200px) * .45) at var(--x, 0 0), rgb(150 190 255 / calc(var(--lit, 1) * .08)), transparent),
+    radial-gradient(circle var(--r, 200px) at var(--base, 50% 50%), rgb(0 0 0 / .15), rgb(0 0 0 / .05)); }
+
+/* Room above the name for the prism: its height (same clamp as Prism) plus a gap. */
+.hero-stage { padding-top: calc(max(170px, min(25vw, 38svh, 320px)) * 1.1); }
+
+/* Load-in: code under the beams stays dark until the light reaches it, then lights word by word (see App). */
+.hero.dark-w .code-dim .w[data-beam="w"], .hero.dark-c .code-dim .w[data-beam=""] { color: rgb(255 255 255 / .055); }
+.hero.lighting .code-dim .w[data-beam] { transition: color .35s ease calc(var(--d, 0) * 1s); }
+
+/* Code the spectrum passes through takes the colour of its band, and keeps it under the pointer (declared after the hover rules so it wins). */
+.code-dim .w[data-beam] { color: hsl(var(--b) 90% 82% / .8); }
+.code-dim .w[data-beam="w"] { color: rgb(255 255 255 / .6); }

@@ -190,7 +190,7 @@ function ScreenMock({ a }) {
           <div className="flex-1 p-3">
             <div className="flex justify-end"><span className="flex items-center gap-1 rounded-lg border border-[#26262a] px-2 py-1 font-medium"><MonitorUp size={11} /> Adicionar fonte</span></div>
             <div className="relative mt-3 aspect-video overflow-hidden rounded-xl border border-[#26262a] bg-[#0b0b0c]">
-              {/* daniel's desktop: an editor open on a wallpaper, with his pointer at a line (ScreenShare's pointer feature). */}
+              {/* daniel's desktop: an editor open on a wallpaper, with luiz's pointer at a line (ScreenShare's pointer feature). */}
               <div className="absolute inset-0" style={{ background: 'radial-gradient(120% 90% at 80% 0%, #3b2a6b, #14121f 55%, #0b0b0c)' }} />
               <div className="absolute inset-x-[8%] top-[16%] bottom-[14%] overflow-hidden rounded-md border border-white/10 bg-[#16161a] shadow-2xl">
                 <div className="flex items-center gap-1 border-b border-white/5 px-1.5 py-1">
@@ -214,7 +214,7 @@ function ScreenMock({ a }) {
               </div>
               <div className="absolute left-[46%] top-[44%] flex items-start">
                 <svg viewBox="0 0 12 16" className="h-3.5 w-auto drop-shadow" aria-hidden><path d="M1 1 L11 9 L6.5 9.5 L4 14.5 Z" fill="#fff" stroke="#0b0b0c" strokeWidth="1" strokeLinejoin="round" /></svg>
-                <span className="mt-2.5 rounded-full px-1.5 py-0.5 text-[7px] font-semibold text-canvas" style={{ background: '#60a5fa' }}>daniel</span>
+                <span className="mt-2.5 rounded-full px-1.5 py-0.5 text-[7px] font-semibold text-canvas" style={{ background: '#60a5fa' }}>luiz</span>
               </div>
               <span className="absolute left-2 top-2 flex items-center gap-1.5 rounded-full bg-black/60 py-1 pl-2 pr-1.5 backdrop-blur"><b>daniel</b><span className="text-ink-3">Entire screen</span><LiveBadge a={a} /></span>
             </div>
@@ -226,9 +226,9 @@ function ScreenMock({ a }) {
 }
 
 export const projects = [
-  { name: 'Silus Finance', desc: 'Controle financeiro pessoal: contas, metas e para onde vai cada real do mês.', href: 'https://www.silus.app', host: 'silus.app', Icon: Hexagon, accent: '#3dd6c3', Mock: SilusMock },
-  { name: 'Prism', desc: 'Tarefas, projetos e foco num só lugar, com temas que mudam de cor com você.', href: null, Icon: Pyramid, accent: '#9b8cff', Mock: PrismMock },
-  { name: 'ScreenShare', desc: 'Compartilhe a tela direto do navegador, ponto a ponto. Manda o link e pronto.', href: 'https://screen.luizfranzon.dev/', host: 'screen.luizfranzon.dev', Icon: Play, accent: '#bef264', Mock: ScreenMock },
+  { id: 'silus', name: 'Silus Finance', desc: 'Controle financeiro pessoal: contas, metas e para onde vai cada real do mês.', href: 'https://www.silus.app', host: 'silus.app', Icon: Hexagon, accent: '#3dd6c3', Mock: SilusMock },
+  { id: 'prism', name: 'Prism', desc: 'Tarefas, projetos e foco num só lugar, com temas que mudam de cor com você.', href: null, Icon: Pyramid, accent: '#9b8cff', Mock: PrismMock },
+  { id: 'screenshare', name: 'ScreenShare', desc: 'Compartilhe a tela direto do navegador, ponto a ponto. Manda o link e pronto.', href: 'https://screen.luizfranzon.dev/', host: 'screen.luizfranzon.dev', Icon: Play, accent: '#bef264', Mock: ScreenMock },
 ]
 
 function Project({ p, flip }) {
@@ -255,9 +255,8 @@ function Project({ p, flip }) {
     })
   }, { scope: stage })
 
-  const Cta = p.href ? 'a' : 'span'
   return (
-    <article style={{ '--accent': p.accent }} className="project grid items-center gap-10 py-16 md:grid-cols-2 md:gap-16">
+    <article id={p.id} style={{ '--accent': p.accent }} className="project grid items-center gap-10 py-16 md:grid-cols-2 md:gap-16">
       <div className={flip ? 'md:order-2' : ''}>
         <div className="flex items-center gap-5">
         <span className="icon-3d" aria-hidden>
@@ -275,12 +274,11 @@ function Project({ p, flip }) {
         </div>
         <p className="mt-6 max-w-sm text-lg leading-relaxed text-ink-2">{p.desc}</p>
         <div className="mt-8 flex items-center gap-4">
-          <Cta {...(p.href && { href: p.href, target: '_blank', rel: 'noreferrer' })}
-            className={`cta group inline-flex items-center gap-1.5 rounded-full px-5 py-3 text-sm font-medium ${p.href ? 'text-canvas' : 'border border-line text-ink-2'}`}
-            style={p.href ? { background: p.accent } : undefined}>
-            {p.href ? <>Abrir {p.host} <ArrowUpRight className="arrow" size={16} /></> : 'Em desenvolvimento'}
-          </Cta>
-          {p.href && <span className="flex items-center gap-2 text-sm text-ink-3"><i className="size-2 rounded-full bg-[#4ade80] shadow-[0_0_10px_#4ade80]" /> No ar</span>}
+          {p.href ? (
+            <a href={p.href} target="_blank" rel="noreferrer" className="cta group inline-flex items-center gap-1.5 rounded-full px-5 py-3 text-sm font-medium text-canvas" style={{ background: p.accent }}>
+              Abrir {p.host} <ArrowUpRight className="arrow" size={16} />
+            </a>
+          ) : <span className="flex items-center gap-2 text-sm text-ink-3"><i className="size-2 rounded-full border border-ink-3" /> Em breve</span>}
         </div>
       </div>
 
