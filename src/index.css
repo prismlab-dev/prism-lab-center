@@ -49,7 +49,7 @@ html { scroll-behavior: smooth; }
 /* Code field: dim copy always on, lit copy (Prism syntax colours) only inside the pointer's spotlight. */
 .code-field { position: absolute; inset: -88px 0 0; overflow: hidden; pointer-events: none;
   /* Clear under the nav so it reads cleanly, fades out toward the bottom, and thins out right behind the name so the title keeps focus. */
-  mask-image: linear-gradient(transparent, rgb(0 0 0 / .2) 9%, #000 22%, rgb(0 0 0 / .35) 65%, transparent), radial-gradient(ellipse 38% 26% at 50% 50%, rgb(0 0 0 / .3), #000);
+  mask-image: linear-gradient(transparent, rgb(0 0 0 / .2) 9%, #000 22%, #000 55%, rgb(0 0 0 / .5) 82%, transparent), radial-gradient(ellipse 38% 26% at 50% 50%, rgb(0 0 0 / .3), #000);
   mask-composite: intersect; }
 .code-dim { position: absolute; inset: 0; margin: 0 0 0 -6rem; padding: 1rem 0 0; overflow: hidden;
   font: 400 13px/1.75 var(--font-mono); white-space: pre; color: rgb(255 255 255 / .055); }
@@ -118,12 +118,13 @@ html { scroll-behavior: smooth; }
     radial-gradient(circle var(--r, 200px) at var(--base, 50% 50%), rgb(0 0 0 / .15), rgb(0 0 0 / .05)); }
 
 /* Room above the name for the prism: its height (same clamp as Prism) plus a gap. */
-.hero-stage { padding-top: calc(max(170px, min(25vw, 38svh, 320px)) * 1.1); }
+.hero-stage { padding-top: calc(max(170px, min(25vw, 38svh, 320px)) * 1.5); }
 
 /* Load-in: code under the beams stays dark until the light reaches it, then lights word by word (see App). */
 .hero.dark-w .code-dim .w[data-beam="w"], .hero.dark-c .code-dim .w[data-beam=""] { color: rgb(255 255 255 / .055); }
 .hero.lighting .code-dim .w[data-beam] { transition: color .35s ease calc(var(--d, 0) * 1s); }
 
 /* Code the spectrum passes through takes the colour of its band, and keeps it under the pointer (declared after the hover rules so it wins). */
-.code-dim .w[data-beam] { color: hsl(var(--b) 90% 82% / .8); }
-.code-dim .w[data-beam="w"] { color: rgb(255 255 255 / .6); }
+.code-dim .w[data-beam] { color: hsl(var(--b) 95% 70% / calc(var(--a, 1) * .8)); text-shadow: 0 0 8px hsl(var(--b) 100% 60% / calc(var(--a, 1) * .35)); }
+/* text-shadow off: --b keeps the hue of the last spectrum band the word sat in, which tinted the white light. */
+.code-dim .w[data-beam="w"] { color: rgb(255 255 255 / calc(var(--a, 1) * .28)); text-shadow: none; }

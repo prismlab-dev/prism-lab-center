@@ -89,13 +89,18 @@ export default function CodeField() {
         const t = dt(b.dm, vx) > 0 ? (rel(vx) - r0) / (r1 - r0) : -1
         const back = -dt(b.din, ve)
         // Hue (red 10 … violet 280) is snapped to steps of 10 and only written when it changes, so a drifting beam stays cheap.
-        const v = t >= -0.3 && t <= 1.3 ? Math.round(1 + Math.min(1, Math.max(0, t)) * 27) * 10
-          : back > 0 && Math.abs(cross(b.din, ve)) < b.w ? 'w' : null
-        if (v === w.b) continue
-        w.b = v
+        const v = t >= -0.6 && t <= 1.6 ? Math.round(1 + Math.min(1, Math.max(0, t)) * 27) * 10
+          : back > 0 && Math.abs(cross(b.din, ve)) < b.w * 1.8 ? 'w' : null
+        // Past the spectrum's edges words fade out, down to 35% at the outer limit, and all lit words dim with distance
+        // from the prism, down to 15% at 60% of the field width (snapped to tenths, like the hue).
+        const edge = typeof v === 'number' ? 1 - Math.max(-t, t - 1, 0) / 0.6 * 0.65 : 1
+        const far = 1 - Math.min(1, (v === 'w' ? back : Math.hypot(...vx)) / reach) * 0.85
+        const a = Math.round(edge * far * 10) / 10
+        if (v === w.b && a === w.a) continue
+        w.b = v; w.a = a
         if (v === null) delete w.el.dataset.beam
-        else if (v === 'w') w.el.dataset.beam = 'w'
-        else { w.el.dataset.beam = ''; w.el.style.setProperty('--b', v) }
+        else if (v === 'w') { w.el.dataset.beam = 'w'; w.el.style.setProperty('--a', a) }
+        else { w.el.dataset.beam = ''; w.el.style.setProperty('--b', v); w.el.style.setProperty('--a', a) }
         // Delay for the load-in reveal (see App): light reaches each word in order, from the source
         if (v !== null) w.el.style.setProperty('--d', v === 'w' ? Math.max(0, 1 - back / reach) * 0.45 : Math.min(1, Math.hypot(...vx) / reach) * 0.7)
       }

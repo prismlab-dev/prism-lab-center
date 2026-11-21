@@ -23,11 +23,14 @@ const EDGES = TRI.map((p, i) => {
 const DEPTH = 0.55
 
 // Optics. Dispersion is exaggerated (real crown glass spreads about a tenth of this) so the fan reads on screen.
-const N_RED = 1.45, N_VIOLET = 1.62
+const N_RED = 1.25, N_VIOLET = 1.42
 const ior = (t) => N_RED + (N_VIOLET - N_RED) * t // t: 0 red … 1 violet
 const AIM = [-(0.5 - 0.5 * 0.42), -H / 3 + H * 0.42] // where the light lands on the left face
 // Resting source direction: minimum deviation for the middle of the spectrum (the ray runs parallel to the base inside)
 const REST = 30 - (Math.asin(ior(0.5) / 2) * 180) / Math.PI // degrees, direction from the face back toward the source
+// Source offset from REST: a compromise between a level spectrum and a level source (the glass bends light at least 24°).
+// At -4 the white beam climbs about 16° and the spectrum leaves about 8° down.
+const AIM_RIGHT = -4
 const BEAM_W = 0.045
 const BANDS = 14
 
@@ -314,7 +317,7 @@ export default function Prism() {
       .fromTo(s, { flare: 3 }, { flare: 1, duration: 0.7, ease: 'power3.out', immediateRender: false }, 1.55)
       .to(s, { fan: 1, duration: 0.7, ease: 'power2.out' }, 1.6)
 
-    let W = 1, Hpx = 1, angle = 0, target = 0, sent = null, beamPx = 0
+    let W = 1, Hpx = 1, angle = AIM_RIGHT, target = AIM_RIGHT, sent = null, beamPx = 0
     const v3 = new THREE.Vector3()
     const toPx = (p) => { v3.set(p[0], p[1], 0).applyMatrix4(rig.matrixWorld).project(camera); return [((v3.x + 1) / 2) * W, ((1 - v3.y) / 2) * Hpx] }
     const pxDir = (p, d) => { const a = toPx(p), b = toPx(add(p, d, 0.5)); return norm([b[0] - a[0], b[1] - a[1]]) }
@@ -429,7 +432,7 @@ export default function Prism() {
     // Now and then the light source drifts to a new angle, slowly, like a lamp on a heavy mount. The whole path
     // follows from the trace: the landing point slides, the bend changes, the spectrum swings and widens.
     let drift = 0
-    const wander = () => { target = (Math.random() * 2 - 1) * 7; drift = setTimeout(wander, 4000 + Math.random() * 4000) }
+    const wander = () => { target = AIM_RIGHT + (Math.random() * 2 - 1) * 4; drift = setTimeout(wander, 4000 + Math.random() * 4000) }
     if (!still) drift = setTimeout(wander, 4500)
 
     let visible = true, raf = 0, last = performance.now()

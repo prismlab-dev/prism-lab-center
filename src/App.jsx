@@ -78,7 +78,7 @@ export default function App() {
         <section className="hero relative">
           <CodeField />
           <Prism />
-          <div className="hero-stage relative mx-auto flex min-h-[52svh] max-w-6xl flex-col items-center justify-center px-6 pb-6 text-center">
+          <div className="hero-stage relative mx-auto flex min-h-[60svh] max-w-6xl flex-col items-center justify-center px-6 pb-32 text-center">
             <div className="relative">
               <h1 className="hero-title" aria-label="Prism Labs">
                 <span aria-hidden>Prism L<Atom className="atom-a" strokeWidth={1.6} />bs</span>
