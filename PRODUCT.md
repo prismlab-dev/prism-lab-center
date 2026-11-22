@@ -22,8 +22,8 @@ Undecided: what sets Prism Labs apart from other app makers has not been stated 
 
 - The site is in Portuguese (pt-BR): copy, dates, and currency (R$).
 - Stack: Vite, React 19, Tailwind v4, GSAP, and lucide-react.
-- The product showcase (`src/Showcase.jsx`) shows three apps: Silus Finance (personal finance, live at silus.app), Prism (tasks and focus, in development) and ScreenShare (browser screen sharing, live at screen.luizfranzon.dev).
-- Team: Daniel Frizzatti, Luiz Franzon, Ryan Rodrigues.
+- The product showcase (`src/Showcase.jsx`) shows three apps: Silus (personal finance, live at silus.app), Merer (formerly Prism; tasks and focus, live at merer.madebyprism.app) and ScreenShare (browser screen sharing, live at screen.luizfranzon.dev).
+- Team: Daniel Frizzatti, Luiz Franzon, Ryan Cardoso.
 
 ## Brand Commitments
 

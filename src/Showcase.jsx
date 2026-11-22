@@ -101,15 +101,15 @@ const today = [
   ['Fechar briefing da landing', '#ff7b8a', [['Hoje 10:00', '#3dd6c3'], ['design', '#78787b']], 'Lançamento', '#9b8cff'],
 ]
 
-// The Prism home screen: its spectrum backdrop, sidebar with projects, and today's tasks with their meta.
-function PrismMock({ a }) {
+// The Merer home screen: its spectrum backdrop, sidebar with projects, and today's tasks with their meta.
+function MererMock({ a }) {
   return (
     <>
-      <Window url="prism">
+      <Window url="merer.madebyprism.app">
         <div className="relative flex text-[10px]">
           <div className="pointer-events-none absolute inset-0 opacity-60" style={{ background: 'radial-gradient(50% 60% at 70% 0%, rgb(155 140 255 / .18), transparent 70%), radial-gradient(40% 50% at 100% 30%, rgb(61 214 195 / .1), transparent 70%), radial-gradient(40% 50% at 40% 0%, rgb(255 123 138 / .1), transparent 70%)' }} />
           <div className="relative w-32 shrink-0 border-r border-white/5 p-2.5">
-            <div className="flex items-center gap-1.5 px-1 text-[12px] font-semibold"><Pyramid size={13} color="#fff" /> Prism</div>
+            <div className="flex items-center gap-1.5 px-1 text-[12px] font-semibold"><Pyramid size={13} color="#fff" /> Merer</div>
             <div className="mt-2.5 flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 font-medium">
               <span className="grid size-3.5 place-items-center rounded-full text-[9px] text-canvas" style={{ background: a }}>+</span> Adicionar tarefa
             </div>
@@ -200,8 +200,8 @@ function ScreenMock({ a }) {
                 <pre className="px-2 py-1.5 font-mono text-[6.5px] leading-[1.6] text-ink-2">
 {[
   [['const ', '#c084fc'], ['projetos', '#fff'], [' = ', '#8b8b94'], ['[', '#8b8b94']],
-  [["  'Silus Finance'", a], [',', '#8b8b94']],
-  [["  'Prism'", a], [',', '#8b8b94']],
+  [["  'Silus'", a], [',', '#8b8b94']],
+  [["  'Merer'", a], [',', '#8b8b94']],
   [["  'ScreenShare'", a], [',', '#8b8b94']],
   [[']', '#8b8b94']],
   [['lancar', '#60a5fa'], ['(projetos)', '#8b8b94']],
@@ -226,8 +226,8 @@ function ScreenMock({ a }) {
 }
 
 export const projects = [
-  { id: 'silus', name: 'Silus Finance', desc: 'Controle financeiro pessoal: contas, metas e para onde vai cada real do mês.', href: 'https://www.silus.app', host: 'silus.app', Icon: Hexagon, accent: '#3dd6c3', Mock: SilusMock },
-  { id: 'prism', name: 'Prism', desc: 'Tarefas, projetos e foco num só lugar, com temas que mudam de cor com você.', href: null, Icon: Pyramid, accent: '#9b8cff', Mock: PrismMock },
+  { id: 'silus', name: 'Silus', desc: 'Controle financeiro pessoal: contas, metas e para onde vai cada real do mês.', href: 'https://www.silus.app', host: 'silus.app', Icon: Hexagon, accent: '#3dd6c3', Mock: SilusMock },
+  { id: 'merer', name: 'Merer', desc: 'Tarefas, projetos e foco num só lugar, com temas que mudam de cor com você.', href: 'https://merer.madebyprism.app', host: 'merer.madebyprism.app', Icon: Pyramid, accent: '#9b8cff', Mock: MererMock },
   { id: 'screenshare', name: 'ScreenShare', desc: 'Compartilhe a tela direto do navegador, ponto a ponto. Manda o link e pronto.', href: 'https://screen.luizfranzon.dev/', host: 'screen.luizfranzon.dev', Icon: Play, accent: '#bef264', Mock: ScreenMock },
 ]
 

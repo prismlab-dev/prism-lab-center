@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Prisma palette, lifted from the Prism app: neutral surfaces, colour lives in marks. */
+/* Prisma palette, lifted from the Merer app: neutral surfaces, colour lives in marks. */
 @theme {
   --font-sans: "Spline Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Spline Sans Mono", ui-monospace, monospace;
