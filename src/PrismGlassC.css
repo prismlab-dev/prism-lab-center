@@ -1,0 +1,40 @@
+.prism-glass-c-defs {
+  position: absolute;
+}
+
+.prism-glass-c-liquid {
+  position: absolute;
+  inset: -88px 0 0;
+  pointer-events: none;
+}
+
+.prism-glass-c-surface,
+.prism-glass-c-rim {
+  position: absolute;
+  inset: 0;
+  clip-path: var(--clip, polygon(0 0));
+  opacity: var(--glass-opacity, 0);
+}
+
+.prism-glass-c-surface {
+  -webkit-backdrop-filter: blur(4px) saturate(1.4) brightness(2.6);
+  backdrop-filter: url(#prism-glass-c-liquid) saturate(1.4) brightness(2.6);
+}
+
+.prism-glass-c-liquid .prism-glass-c-rim {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.prism-glass-c-rim .base {
+  fill: rgb(0 0 0 / .18);
+}
+
+.prism-glass-c-rim .back,
+.prism-glass-c-rim .rim {
+  fill: none;
+  stroke: rgb(255 255 255 / .15);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}

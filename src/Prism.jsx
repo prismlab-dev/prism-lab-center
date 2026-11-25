@@ -6,11 +6,9 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import gsap from 'gsap'
 
-// A real glass prism in WebGL. The light is not drawn on top of it: a white ray is traced through the prism's
-// cross-section with Snell's law, once per wavelength, and every beam, glint and lit face comes from that trace.
-// White enters the left face, bends, splits inside the glass and leaves the right face as a spectrum.
-// The glass itself is a bevelled extrusion with a transmissive, dispersive physical material, lit by a dark studio
-// environment, so its faces and chamfers catch light by their own orientation.
+// A prism in WebGL. The light is not drawn on top of it: a white ray is traced through the prism's cross-section
+// with Snell's law, once per wavelength, and every beam and glint comes from that trace. White enters the left face,
+// bends, splits inside and leaves the right face as a spectrum. The solid itself is a hologram of light (see HOLO_FS).
 // The traced beam (in screen pixels) is published on the hero as `prismBeam` + a `prism:beam` event for CodeField.
 
 // Cross-section, side 1, centroid at the origin, counter-clockwise: apex, left, right.
@@ -127,58 +125,47 @@ void main() {
   gl_FragColor = vec4(uColor * a * (1. - smoothstep(.75, 1., r)) * uI, 1.);
 }`
 
-// Added to the glass material: where the light sheet crosses a face, the face lights up along the depth of the glass
-// (the bright slivers at the corners), and light scattering in the bulk glows faintly along the path inside.
-const SPOTS = 6, SEGS = 3
-const GLASS_HEAD = `
-uniform vec2 uSpotP[${SPOTS}]; uniform vec3 uSpotC[${SPOTS}];
-uniform vec2 uSegA[${SEGS}]; uniform vec2 uSegB[${SEGS}]; uniform vec3 uSegC[${SEGS}];
-uniform float uSpotR, uSheet, uScatterR;
-varying vec3 vLocal; varying vec3 vLocalN;
-float segDist(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; return length(pa - ba * clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0., 1.)); }`
-const GLASS_BODY = `{
-  float wall = 1. - smoothstep(.3, .8, abs(vLocalN.z));
-  vec3 beam = vec3(0.);
-  for (int i = 0; i < ${SPOTS}; i++) { vec2 q = vLocal.xy - uSpotP[i]; beam += uSpotC[i] * exp(-dot(q, q) / (uSpotR * uSpotR)); }
-  beam *= wall * exp(-pow(vLocal.z / uSheet, 2.));
-  if (gl_FrontFacing && vLocalN.z > .8) for (int i = 0; i < ${SEGS}; i++) {
-    float d = segDist(vLocal.xy, uSegA[i], uSegB[i]); beam += uSegC[i] * exp(-d * d / (uScatterR * uScatterR));
-  }
-  totalEmissiveRadiance += beam;
+// "lines": the prism is a plot of its own light field. Its faces are contour lines, like a topographic map or an
+// oscilloscope trace: flat and evenly spaced at rest, they bend and bunch up wherever the wavefronts from the entry
+// point and the beam pass, white at the entry and splitting into the spectrum toward the exit face. Clicking the hero
+// sends a ripple through the lines. A scan band sweeps up it and it glitches now and then.
+// "glass": no hologram, only the liquid-glass filter over the code (see the SVG below) and a rim of light.
+const HOLO_VS = `varying vec3 vLocal, vN; void main() { vLocal = position; vN = normal; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`
+const HOLO_FS = `
+uniform float uTime, uFill, uScan, uGlitch, uLit, uCell, uPulse; uniform vec2 uE, uX, uPC;
+varying vec3 vLocal, vN;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float segDist(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0., 1.)); }
+${GLSL_SPECTRUM}
+void main() {
+  bool cap = abs(vN.z) > .5;
+  vec2 q = cap ? vLocal.xy : vec2(vLocal.x + vLocal.y * .58, vLocal.z * 1.6);
+  // Glitch: whole rows of the lattice tear sideways for a few frames
+  float row = floor(vLocal.y * 18.), tear = step(.78, hash(vec2(row, floor(uTime * 16.)))) * uGlitch;
+  q.x += (hash(vec2(row, 7.)) - .5) * .35 * tear;
+  // Wavefronts ringing out from the entry point; the lattice swells where a crest passes
+  float rad = length(vLocal.xy - uE), wave = pow(.5 + .5 * sin(rad * 22. - uTime * 2.2), 2.) * exp(-rad * 1.4); // long, soft swells: several rows ramp up and down together
+  // Recompile shockwave: a ring expanding from where the hero was clicked
+  float ring = exp(-pow((length(vLocal.xy - uPC) - uPulse * 1.6) * 9., 2.)) * (1. - smoothstep(.5, 1.2, uPulse));
+  float y = vLocal.y + .45;
+  float shown = step(y + hash(vec2(floor(q.x * 30.), 2.)) * .35, uFill * 1.4); // build up from the base on load
+  // Beam: white at the entry, spectrum toward the exit
+  float d = segDist(vLocal.xy, uE, uX), along = clamp(dot(vLocal.xy - uE, uX - uE) / dot(uX - uE, uX - uE), 0., 1.);
+  float beam = exp(-d * d / .006) * uLit * (cap ? 1. : .4);
+  vec3 hue = mix(vec3(1.), spectrum(clamp(.5 - (vLocal.y - mix(uE.y, uX.y, along)) * 6., 0., 1.)) * 1.4, along);
+  // Waves stay white light, only taking a soft tint of the beam's spectrum as they near the exit face
+  vec3 waveHue = mix(vec3(1.), hue, .3 * along);
+  float scan = exp(-pow((vLocal.y - uScan) * 16., 2.));
+  // The field: height plus the light. Contours are its level lines, so a crest pushes them together and bends them
+  float field = q.y / uCell + (wave * uLit * 1.8 + beam * 2.5 + ring * 3.) * (cap ? 1. : .5) + sin(q.x * 9. + uTime * .6) * .15;
+  float l = abs(fract(field) - .5) / fwidth(field), major = step(.5, abs(fract(floor(field + .5) / 5.) - .5) * 2. - .79); // every fifth line heavier
+  float pt = clamp(1. - l / (1. + major * .6), 0., 1.);
+  float lum = clamp(.12 + major * .12 + scan * .5 + wave * uLit * .6 + beam * .9 + ring, 0., 1.);
+  float k = pt * shown * (cap ? 1. : .55);
+  vec3 tint = mix(mix(waveHue, hue, clamp(beam * 2., 0., 1.)), spectrum(fract(field * .04)) * 1.3, ring);
+  vec3 c = k * mix(vec3(.26, .29, .36), mix(vec3(.93, .95, 1.), tint * .9, .5 * along), lum);
+  gl_FragColor = vec4(c * (1. - tear * .5), 1.);
 }`
-
-// The triangle with slightly rounded corners, so the long edges of the glass catch a highlight too.
-function triShape(r) {
-  const s = new THREE.Shape()
-  TRI.forEach((p, i) => {
-    const prev = TRI[(i + 2) % 3], next = TRI[(i + 1) % 3]
-    const a = add(p, norm(add(prev, p, -1)), r), b = add(p, norm(add(next, p, -1)), r)
-    i ? s.lineTo(...a) : s.moveTo(...a)
-    s.quadraticCurveTo(p[0], p[1], b[0], b[1])
-  })
-  return s
-}
-
-// A dark studio: black, with a few narrow light strips. Faces and chamfers only light up when they turn toward one.
-function studio(renderer) {
-  const env = new THREE.Scene()
-  env.add(new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), new THREE.MeshBasicMaterial({ color: 0, side: THREE.BackSide })))
-  const strip = (w, h, pos, k) => {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color().setScalar(k), side: THREE.DoubleSide }))
-    m.position.set(...pos); m.lookAt(0, 0, 0); env.add(m)
-  }
-  strip(7, 0.5, [0, 4.6, 0.5], 7) // long strip overhead: the top chamfers
-  strip(0.45, 5, [4.6, 0.6, 1.5], 5) // tall strip on the right
-  strip(0.3, 4, [-4.6, -0.8, 0.5], 9) // narrow, hot strip on the left, the side the light comes from
-  strip(2.2, 1.2, [-2.4, 2.6, 4.4], 1.6) // soft box up front, a faint sheen across the face
-  strip(4, 0.25, [0.5, -4.6, 2], 0.8) // bounce from below: the bottom edge
-  const pmrem = new THREE.PMREMGenerator(renderer)
-  const tex = pmrem.fromScene(env, 0).texture
-  pmrem.dispose()
-  env.traverse((o) => { o.geometry?.dispose(); o.material?.dispose() })
-  return tex
-}
-
 const FOV = 36
 // Convex hull of 2D points (monotone chain).
 function hull2(ps) {
@@ -191,13 +178,14 @@ function hull2(ps) {
 
 // Refraction map for the glass filter, in the prism's on-screen box (apex top centre, base along the bottom): red and green
 // hold how far each pixel's sample is pulled inward, strongest at the edges and falling off over a bezel, flat inside.
-let mapUrl
-function glassMap() {
-  if (mapUrl) return mapUrl
+// Liquid glass uses a thin bezel: only the rim bends the code, so the face itself reads as one smooth pane.
+const mapUrl = {}
+function glassMap(bezel = 0.22) {
+  if (mapUrl[bezel]) return mapUrl[bezel]
   const N = 256, c = document.createElement('canvas'); c.width = c.height = N
   const g = c.getContext('2d'), img = g.createImageData(N, N)
   // Edges as inward unit normal n and offset k (inside where n.p + k > 0), for the triangle (0.5,0) (0,1) (1,1).
-  const edges = [[[0, -1], 1], [[0.894, 0.447], -0.447], [[-0.894, 0.447], 0.447]], bezel = 0.22
+  const edges = [[[0, -1], 1], [[0.894, 0.447], -0.447], [[-0.894, 0.447], 0.447]]
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const p = [(x + 0.5) / N, (y + 0.5) / N]
     let d = Infinity, n = [0, 0]
@@ -206,11 +194,11 @@ function glassMap() {
     img.data.set([128 + n[0] * m * 127, 128 + n[1] * m * 127, 128, 255], (y * N + x) * 4)
   }
   g.putImageData(img, 0, 0)
-  return (mapUrl = c.toDataURL())
+  return (mapUrl[bezel] = c.toDataURL())
 }
 
-export default function Prism() {
-  const ref = useRef(), blurRef = useRef(), svgRef = useRef()
+export default function Prism({ variant = 'lines' }) {
+  const ref = useRef(), blurRef = useRef(), svgRef = useRef(), glass = variant === 'glass'
 
   useEffect(() => {
     const canvas = ref.current, hero = canvas.closest('.hero'), title = hero.querySelector('h1.hero-title')
@@ -223,49 +211,22 @@ export default function Prism() {
     renderer.toneMapping = THREE.ACESFilmicToneMapping
 
     const scene = new THREE.Scene()
-    scene.environment = studio(renderer)
     const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 50)
     const rig = new THREE.Group() // prism + light, seen a little from above
     rig.rotation.x = -0.22
     scene.add(rig)
     const time = { value: 0 }
 
-    // Glass
-    const geo = new THREE.ExtrudeGeometry(triShape(0.035), {
-      depth: DEPTH, bevelEnabled: true, bevelThickness: 0.035, bevelSize: 0.03, bevelOffset: -0.03, bevelSegments: 3, curveSegments: 6,
-    }).translate(0, 0, -DEPTH / 2)
-    const glassU = {
-      uSpotP: { value: Array.from({ length: SPOTS }, () => new THREE.Vector2()) },
-      uSpotC: { value: Array.from({ length: SPOTS }, () => new THREE.Color(0)) },
-      uSegA: { value: Array.from({ length: SEGS }, () => new THREE.Vector2()) },
-      uSegB: { value: Array.from({ length: SEGS }, () => new THREE.Vector2()) },
-      uSegC: { value: Array.from({ length: SEGS }, () => new THREE.Color(0)) },
-      uSpotR: { value: 0.055 }, uSheet: { value: DEPTH * 0.42 }, uScatterR: { value: 0.05 },
+    // Hologram
+    const geo = new THREE.ExtrudeGeometry(new THREE.Shape(TRI.map((p) => new THREE.Vector2(...p))), { depth: DEPTH, bevelEnabled: false }).translate(0, 0, -DEPTH / 2)
+    const holoU = {
+      uTime: time, uFill: { value: 0 }, uScan: { value: -2 }, uGlitch: { value: 0 }, uLit: { value: 0 },
+      uCell: { value: 0.03 }, uPulse: { value: 9 }, uPC: { value: new THREE.Vector2() }, uE: { value: new THREE.Vector2() }, uX: { value: new THREE.Vector2(1, 0) },
     }
-    // Surface texture: a fine grain drawn once to a canvas and used to vary the glass's roughness and bump,
-    // so highlights soften slightly instead of sitting on a perfect surface.
-    const tc = document.createElement('canvas'); tc.width = tc.height = 512
-    const g = tc.getContext('2d'), img = g.createImageData(512, 512)
-    for (let i = 0; i < img.data.length; i += 4) { const v = 110 + Math.random() * 40; img.data.set([v, v, v, 255], i) }
-    g.putImageData(img, 0, 0)
-    const tex = new THREE.CanvasTexture(tc)
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(1.5, 1.5); tex.anisotropy = 4
-    const glass = new THREE.MeshPhysicalMaterial({
-      roughnessMap: tex, bumpMap: tex, bumpScale: 0.6,
-      color: 0xffffff, metalness: 0, roughness: 0.12, transmission: 1, ior: ior(0.5), thickness: 0.6, dispersion: 5,
-      attenuationColor: new THREE.Color(0xa3acc0), attenuationDistance: 0.8, specularIntensity: 1, envMapIntensity: 0, side: THREE.DoubleSide,
-    })
-    glass.onBeforeCompile = (sh) => {
-      Object.assign(sh.uniforms, glassU)
-      sh.vertexShader = sh.vertexShader
-        .replace('#include <common>', '#include <common>\nvarying vec3 vLocal; varying vec3 vLocalN;')
-        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvLocal = position; vLocalN = normal;')
-      sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', `#include <common>\n${GLASS_HEAD}`)
-        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>\n${GLASS_BODY}`)
-    }
-    const prism = new THREE.Mesh(geo, glass)
+    const holo = new THREE.ShaderMaterial({ vertexShader: HOLO_VS, fragmentShader: HOLO_FS, uniforms: holoU, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })
+    const prism = new THREE.Mesh(geo, holo)
     rig.add(prism)
+    if (glass) prism.visible = false // the liquid glass is drawn in CSS/SVG over the code, with its rim in .prism-rim
 
     // Light. Beams are opaque-additive so the transmission pass sees them: what lies behind or inside the glass is
     // refracted and dispersed by it, not pasted over it.
@@ -309,9 +270,12 @@ export default function Prism() {
 
     // Load-in, on the same beat as App's timeline: the glass settles, white light runs in from the left,
     // the glass lights up as it lands, and the spectrum bursts out to the right.
-    const s = still ? { glass: 1, front: 1, lit: 1, fan: 1, flare: 1 } : { glass: 0, front: 0, lit: 0, fan: 0, flare: 0 }
+    const s = still ? { glass: 1, fill: 1, front: 1, lit: 1, fan: 1, flare: 1 } : { glass: 0, fill: 0, front: 0, lit: 0, fan: 0, flare: 0 }
     const intro = still ? null : gsap.timeline()
-      .to(s, { glass: 1, duration: 0.8, ease: 'expo.out' }, 0.45)
+      .to(s, { glass: 1, duration: 0.8, ease: 'power2.inOut' }, 0.3)
+      .to(s, { fill: 1, duration: 0.7, ease: 'power1.in' }, 0.7)
+      .add(() => burst(0.35), 1.55)
+      .fromTo(holoU.uPulse, { value: 0 }, { value: 1.2, duration: 1.3, ease: 'power2.out', immediateRender: false }, 1.55)
       .to(s, { front: 1, duration: 0.45, ease: 'power2.in' }, 1.1)
       .to(s, { lit: 1, duration: 0.5, ease: 'power2.out' }, 1.55)
       .fromTo(s, { flare: 3 }, { flare: 1, duration: 0.7, ease: 'power3.out', immediateRender: false }, 1.55)
@@ -346,19 +310,8 @@ export default function Prism() {
       place(intRefl, X, rd, Math.hypot(...add(R, X, -1))); intRefl.uI.value = fOut * 14 * lit
       hotIn.position.set(E[0], E[1], 0); hotIn.material.uniforms.uI.value = 1.5 * s.flare * (s.front > 0.98 ? 1 : 0)
       hotOut.position.set(X[0], X[1], 0); hotOut.material.uniforms.uI.value = 0.9 * lit
-      // Where the light touches the glass
-      const spot = (i, p, c, k) => { glassU.uSpotP.value[i].set(...p); glassU.uSpotC.value[i].setRGB(c[0] * k, c[1] * k, c[2] * k) }
-      spot(0, E, [1, 1, 1], 2.4 * Math.min(1, s.flare))
-      spot(1, rays[0].exit.p, spectrum(0), 1.4 * lit)
-      spot(2, X, [1, 1, 1], 1.2 * lit)
-      spot(3, rays.at(-1).exit.p, spectrum(1), 1.6 * lit)
-      spot(4, R, [0.8, 0.9, 1], fOut * 12 * lit)
-      spot(5, add(E, mid.inner, 0.06), spectrum(0.6), 0.5 * lit)
-      const seg = (i, a, b, c, k) => { glassU.uSegA.value[i].set(...a); glassU.uSegB.value[i].set(...b); glassU.uSegC.value[i].setRGB(c[0] * k, c[1] * k, c[2] * k) }
-      seg(0, E, X, [1, 0.97, 0.95], 0.12 * lit)
-      seg(1, X, R, [0.7, 0.85, 1], 0.06 * lit)
-      seg(2, E, add(E, reflect(d, mid.entry.n), 0.3), [1, 1, 1], 0.08 * lit)
-      glass.envMapIntensity = 2.3 * s.glass
+      holoU.uE.value.set(...E); holoU.uX.value.set(...X); holoU.uLit.value = lit
+      holoU.uFill.value = s.fill;
       // The code behind the glass is blurred: a backdrop blur clipped to the prism's on-screen outline (front face)
       // It follows the glass: blur grows toward the thick base, and the code is lit where the beam crosses and shaded elsewhere.
       prism.updateMatrixWorld()
@@ -369,21 +322,28 @@ export default function Prism() {
       const px = (p) => pt(p).map((v) => `${v.toFixed(1)}px`).join(' ')
       const el = blurRef.current, top = pt(TRI[0]), base = pt([0, -H / 3])
       // Clip to the whole solid as seen (hull of front and back caps), so faces seen in perspective, like the base, get the glass too.
-      const hull = hull2([...TRI.map((q) => pt(q)), ...TRI.map((q) => pt(q, -DEPTH / 2))])
+      // Glass: the front face only, one flat pane (the hull's chamfered base corners made it look cracked).
+      const front = TRI.map((q) => pt(q)), rear = TRI.map((q) => pt(q, -DEPTH / 2)), hull = hull2([...front, ...TRI.map((q) => pt(q, -DEPTH / 2))])
       el.style.setProperty('--clip', `polygon(${hull.map((q) => `${q[0].toFixed(1)}px ${q[1].toFixed(1)}px`).join(', ')})`)
+      // Rim: the silhouette and the front face's own edges. Glass also shades the base seen below the front face (the
+      // silhouette minus the front face, by even-odd fill), so it reads as a solid with one smooth face toward us.
+      const poly = (ps) => `M${ps.map((q) => q.map((v) => v.toFixed(1)).join(',')).join('L')}Z`
+      el.querySelector('.rim').setAttribute('d', poly(hull) + poly(front))
+      el.querySelector('.base').setAttribute('d', poly(hull) + poly(front))
+      // The faces behind, seen through the glass: the back triangle and the three long edges joining it to the front
+      el.querySelector('.back').setAttribute('d', poly(rear) + front.map((q, i) => `M${q.map((v) => v.toFixed(1))}L${rear[i].map((v) => v.toFixed(1))}`).join(''))
       // The glass filter's refraction map is stretched over the prism's on-screen box; its strength scales with the prism.
-      const xs = hull, x0 = Math.min(...xs.map((q) => q[0])), y0 = Math.min(...xs.map((q) => q[1]))
+      const xs = glass ? front : hull, x0 = Math.min(...xs.map((q) => q[0])), y0 = Math.min(...xs.map((q) => q[1]))
       const mw = Math.max(...xs.map((q) => q[0])) - x0, mh = Math.max(...xs.map((q) => q[1])) - y0
       const svg = svgRef.current
       for (const a of [['x', x0], ['y', y0], ['width', mw], ['height', mh]]) svg.querySelector('feImage').setAttribute(a[0], a[1].toFixed(1))
-      svg.querySelectorAll('feDisplacementMap').forEach((m, i) => m.setAttribute('scale', (mh * (0.2 + i * 0.025)).toFixed(1)))
+      svg.querySelectorAll('feDisplacementMap').forEach((m, i) => m.setAttribute('scale', (mh * (glass ? 0.3 + i * 0.06 : 0.2 + i * 0.025)).toFixed(1))) // glass: a wider split, like the reference's -20/-24/-28
       el.style.setProperty('--base', px([0, -H / 3]))
       el.style.setProperty('--e', px(E))
       el.style.setProperty('--x', px(X))
       el.style.setProperty('--r', `${Math.hypot(top[0] - base[0], top[1] - base[1]).toFixed(0)}px`)
       el.style.setProperty('--lit', lit.toFixed(2))
       el.style.opacity = s.glass
-      prism.scale.setScalar(0.94 + 0.06 * s.glass)
 
       // Publish the beam in screen pixels, only once it has turned enough to matter for the code it lights
       if (!force && sent !== null && Math.abs(angle - sent) < 0.2) return
@@ -427,11 +387,28 @@ export default function Prism() {
     const fine = matchMedia('(hover: hover) and (pointer: fine)').matches && !still
     const move = (e) => { const r = hero.getBoundingClientRect(); tilt.ty = ((e.clientX - r.left) / r.width - 0.5) * 0.36; tilt.tx = ((e.clientY - r.top) / r.height - 0.5) * 0.22 }
     const leave = () => { tilt.tx = tilt.ty = 0 }
-    if (fine) { hero.addEventListener('pointermove', move); hero.addEventListener('pointerleave', leave) }
+    if (fine) { hero.addEventListener('pointermove', move); hero.addEventListener('pointerleave', leave); hero.addEventListener('pointerenter', enter) }
 
     // Now and then the light source drifts to a new angle, slowly, like a lamp on a heavy mount. The whole path
     // follows from the trace: the landing point slides, the bend changes, the spectrum swings and widens.
     let drift = 0
+    // A scan sweeps up the hologram every few seconds; now and then it glitches, and the pointer arriving makes it glitch too
+    function burst(dur = 0.25) { if (!still) gsap.fromTo(holoU.uGlitch, { value: 1 }, { value: 0, duration: dur, ease: 'steps(4)' }) }
+    const scan = still ? null : gsap.timeline({ repeat: -1, repeatDelay: 2.5, delay: 2.2 }).fromTo(holoU.uScan, { value: -0.6 }, { value: 0.8, duration: 1.4, ease: 'power1.inOut' })
+    let glitchT = 0
+    const glitchLoop = () => { burst(); glitchT = setTimeout(glitchLoop, 3000 + Math.random() * 6000) }
+    if (!still) glitchT = setTimeout(glitchLoop, 5000)
+    function enter() { burst(0.18) }
+    // Clicking the hero recompiles the prism: a ring of scrambling, spectrum-coloured code from the point nearest the click
+    const click = (e) => {
+      if (still) return
+      const b = canvas.getBoundingClientRect(), x = ((e.clientX - b.left) / W) * 2 - 1, y = 1 - ((e.clientY - b.top) / Hpx) * 2
+      v3.set(x, y, 0.5).unproject(camera).sub(camera.position).normalize()
+      const o = camera.position.clone(), local = prism.worldToLocal(o.add(v3.multiplyScalar(-o.z / v3.z))) // hit z=0 plane
+      holoU.uPC.value.set(Math.max(-0.6, Math.min(0.6, local.x)), Math.max(-0.4, Math.min(0.6, local.y)))
+      gsap.fromTo(holoU.uPulse, { value: 0 }, { value: 1.2, duration: 1.1, ease: 'power2.out' }); burst(0.2)
+    }
+    hero.addEventListener('click', click)
     const wander = () => { target = AIM_RIGHT + (Math.random() * 2 - 1) * 4; drift = setTimeout(wander, 4000 + Math.random() * 4000) }
     if (!still) drift = setTimeout(wander, 4500)
 
@@ -453,12 +430,12 @@ export default function Prism() {
     if (!still) raf = requestAnimationFrame(frame)
 
     return () => {
-      cancelAnimationFrame(raf); clearTimeout(drift); intro?.kill(); ro.disconnect(); io.disconnect()
-      hero.removeEventListener('pointermove', move); hero.removeEventListener('pointerleave', leave)
+      cancelAnimationFrame(raf); clearTimeout(drift); clearTimeout(glitchT); scan?.kill(); gsap.killTweensOf([holoU.uGlitch, holoU.uPulse]); intro?.kill(); ro.disconnect(); io.disconnect()
+      hero.removeEventListener('pointermove', move); hero.removeEventListener('pointerleave', leave); hero.removeEventListener('pointerenter', enter); hero.removeEventListener('click', click)
       scene.traverse((o) => { o.geometry?.dispose(); o.material?.dispose() })
-      scene.environment.dispose(); composer.dispose(); renderer.dispose()
+      composer.dispose(); renderer.dispose()
     }
-  }, [])
+  }, [variant])
 
   // Figma-style glass for the code behind the prism (used by .prism-blur): a light frost, then refraction that bends the
   // code hardest at the edges (a bezel map, see glassMap), with red, green and blue bent by slightly different amounts.
@@ -468,13 +445,17 @@ export default function Prism() {
   ]
   return <><svg ref={svgRef} width="0" height="0" style={{ position: 'absolute' }} aria-hidden>
     <filter id="prism-glass" primitiveUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="frost" />
-      <feImage href={glassMap()} preserveAspectRatio="none" result="map" />
+      <feGaussianBlur in="SourceGraphic" stdDeviation={glass ? 3.5 : 2.5} result="frost" />
+      <feImage href={glassMap(glass ? 0.07 : 0.22)} preserveAspectRatio="none" result="face" />
+      {/* Outside the map's box (the base seen below the face) the map is neutral grey: no shift */}
+      <feFlood floodColor="rgb(128,128,128)" result="flat" />
+      <feMerge result="map"><feMergeNode in="flat" /><feMergeNode in="face" /></feMerge>
       {disp('r', '1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0')}
       {disp('g', '0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0')}
       {disp('b', '0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0')}
       <feBlend in="r" in2="g" mode="screen" result="rg" />
-      <feBlend in="rg" in2="b" mode="screen" />
+      <feBlend in="rg" in2="b" mode="screen" result="out" />
+      <feGaussianBlur in="out" stdDeviation={glass ? 0.6 : 0} />
     </filter>
-  </svg><div ref={blurRef} className="prism-blur" aria-hidden><i /></div><canvas ref={ref} className="prism-gl" aria-hidden /></>
+  </svg><div ref={blurRef} className="prism-blur" data-variant={variant} aria-hidden><i /><svg className="prism-rim"><path className="base" fillRule="evenodd" /><path className="back" /><path className="rim" /></svg></div><canvas ref={ref} className="prism-gl" aria-hidden /></>
 }

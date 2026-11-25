@@ -66,7 +66,7 @@ html { scroll-behavior: smooth; }
 /* Project showcase: a mock of each product floating in 3D, tinted by its own colour of the spectrum. */
 .stage { perspective: 1400px; padding: 2rem 0; }
 .device { position: relative; transform-style: preserve-3d; transform: rotateX(10deg) rotateY(var(--tilt)); }
-.window { border-radius: 18px; border: 1px solid rgb(255 255 255 / .08); background: linear-gradient(var(--color-raised), #121214);
+.window { position: relative; border-radius: 18px; border: 1px solid rgb(255 255 255 / .08); background: linear-gradient(var(--color-raised), #121214);
   box-shadow: 0 40px 80px -20px rgb(0 0 0 / .7), 0 0 0 1px rgb(from var(--accent) r g b / .08), inset 0 1px rgb(255 255 255 / .06); overflow: hidden; }
 .float { position: absolute; transform: translateZ(70px); border-radius: 14px; padding: .85rem 1rem; border: 1px solid rgb(255 255 255 / .1);
   background: rgb(22 22 24 / .85); backdrop-filter: blur(12px); box-shadow: 0 24px 48px -12px rgb(0 0 0 / .8); }
@@ -80,7 +80,10 @@ html { scroll-behavior: smooth; }
   drop-shadow(2px 5px 6px rgb(0 0 0 / .4))
   drop-shadow(0 0 14px rgb(from var(--accent) r g b / .18)); }
 /* Same relief on the project name: the lit gradient goes in the glyph fill, the extrusion filter is shared above. */
-.title-3d { padding-bottom: .08em; color: transparent; -webkit-background-clip: text; background-clip: text;
+.title-3d { padding-bottom: .08em; perspective: 600px; }
+/* The name is split into letters for its entrance, so each letter carries the lit gradient itself (a parent's
+   background-clip: text would stay behind while the letters move). */
+.title-3d .ch { display: inline-block; color: transparent; -webkit-background-clip: text; background-clip: text;
   background-image: linear-gradient(180deg, color-mix(in oklab, var(--accent) 35%, #fff) 5%, var(--accent) 55%, color-mix(in oklab, var(--accent) 70%, #000) 100%); }
 .project + .project { border-top: 1px solid var(--color-line); }
 @media (max-width: 767px) { .device { transform: rotateX(6deg); } .float { display: none; } }
@@ -106,15 +109,36 @@ html { scroll-behavior: smooth; }
 
 /* Between the code and the prism canvas: the code seen through the glass (outline and points set by Prism as --clip, --base,
    --e entry, --x exit, --r prism height). A light blur everywhere, a deeper one toward the thick base, then the glass's light:
-   dimmed overall like dark glass, warm where the white light enters, cooler where the spectrum leaves. */
+   a dark void that cuts the code out so the hologram reads against it, warm where the white light enters, cooler where the spectrum leaves. */
 .prism-blur { position: absolute; left: 0; top: -88px; width: 100%; height: calc(100% + 88px); pointer-events: none; }
 .prism-blur i { position: absolute; inset: 0; clip-path: var(--clip, polygon(0 0)); }
 /* Chromium applies the Figma-style glass (#prism-glass in Prism); Safari falls back to a plain frost. Brightened so the dim code reads through. */
-.prism-blur i { -webkit-backdrop-filter: blur(5px) brightness(2); backdrop-filter: url(#prism-glass) brightness(2);
+.prism-blur i { -webkit-backdrop-filter: blur(6px) brightness(.3); backdrop-filter: url(#prism-glass) brightness(.3);
+  background:
+    radial-gradient(circle calc(var(--r, 200px) * .35) at var(--e, 0 0), rgb(255 248 240 / calc(var(--lit, 1) * .12)), transparent),
+    radial-gradient(circle calc(var(--r, 200px) * .45) at var(--x, 0 0), rgb(150 190 255 / calc(var(--lit, 1) * .08)), transparent),
+    radial-gradient(circle var(--r, 200px) at var(--base, 50% 50%), rgb(2 3 8 / .85), rgb(2 3 8 / .6)); }
+
+/* Cristal (PrismClassic): the glass as it was first built, brighter code through a clearer pane */
+.prism-blur[data-variant="classic"] i { -webkit-backdrop-filter: blur(5px) brightness(2); backdrop-filter: url(#prism-glass) brightness(2);
   background:
     radial-gradient(circle calc(var(--r, 200px) * .35) at var(--e, 0 0), rgb(255 248 240 / calc(var(--lit, 1) * .12)), transparent),
     radial-gradient(circle calc(var(--r, 200px) * .45) at var(--x, 0 0), rgb(150 190 255 / calc(var(--lit, 1) * .08)), transparent),
     radial-gradient(circle var(--r, 200px) at var(--base, 50% 50%), rgb(0 0 0 / .15), rgb(0 0 0 / .05)); }
+
+/* Liquid glass (Prism variant="glass"): clear and a touch saturated instead of dark, a faint frost, and a rim of light
+   just inside the outline (the stroke is clipped to the prism, so only its inner half shows, like an inset highlight). */
+.prism-rim { display: none; }
+.prism-blur[data-variant="lines"] .prism-rim { display: block; position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; clip-path: var(--clip); }
+.prism-blur[data-variant="glass"] i { backdrop-filter: url(#prism-glass) saturate(1.4) brightness(2.6); -webkit-backdrop-filter: blur(4px) saturate(1.4) brightness(2.6);
+  background: radial-gradient(circle calc(var(--r, 200px) * .4) at var(--e, 0 0), rgb(255 250 245 / calc(var(--lit, 1) * .14)), transparent),
+    linear-gradient(160deg, rgb(255 255 255 / .07), rgb(255 255 255 / .01) 45%, rgb(0 0 0 / .1)); }
+.prism-blur[data-variant="glass"] .prism-rim { display: block; position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; clip-path: var(--clip); opacity: var(--lit, 1); }
+.prism-rim .base { fill: none; }
+.prism-blur[data-variant="glass"] .prism-rim .base { fill: rgb(0 0 0 / .45); }
+.prism-rim .back { display: none; }
+.prism-blur[data-variant="glass"] .prism-rim .back { display: inline; fill: none; stroke: rgb(255 255 255 / .16); stroke-width: 1; }
+.prism-rim .rim { fill: none; stroke: rgb(255 255 255 / .45); stroke-width: 3; stroke-linejoin: round; filter: drop-shadow(0 0 6px rgb(255 255 255 / .35)); }
 
 /* Room above the name for the prism: its height (same clamp as Prism) plus a gap. */
 .hero-stage { padding-top: calc(max(170px, min(25vw, 38svh, 320px)) * 1.5); }
@@ -161,3 +185,45 @@ html { scroll-behavior: smooth; }
   background: color-mix(in oklab, var(--fill) var(--k), #141416); color: color-mix(in oklab, #0e0e10 var(--k), var(--fill));
   box-shadow: inset 0 0 0 1px rgb(from var(--fill) r g b / calc(var(--on, 0) * .45)); }
 .cta-ghost .spec { mix-blend-mode: normal; background: radial-gradient(90px circle at var(--mx, 50%) var(--my, 50%), hsl(var(--h, 0) 100% 65% / .22), hsl(var(--h, 0) 100% 65% / .09) 45%, transparent 100%); }
+
+/* Temporary switch between the two prism styles */
+.prism-switch { position: fixed; right: 1rem; bottom: 1rem; z-index: 50; display: flex; padding: 3px; border-radius: 999px;
+  background: rgb(20 22 30 / .7); backdrop-filter: blur(10px); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .12); }
+.prism-switch button { padding: .45rem .9rem; border-radius: 999px; font-size: .8125rem; color: rgb(255 255 255 / .6); cursor: pointer; }
+.prism-switch button[aria-pressed="true"] { background: rgb(255 255 255 / .9); color: #000; }
+.prism-switch button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* Window rim lit in the spectrum on the side nearest the pointer (--ra angle, --rim strength, set from Project).
+   An arc, not a full ring: the colours sit in a 140deg slice of the conic gradient and fade out on both ends. */
+.window::after { content: ""; position: absolute; inset: 0; z-index: 5; border-radius: inherit; padding: 1.5px; pointer-events: none;
+  opacity: var(--rim, 0); mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  background: conic-gradient(from calc(var(--ra, 0deg) - 70deg), transparent, #ff2d55 15deg, #f7c04a 40deg, #bef264 60deg, #3dd6c3 80deg, #5cb8ff 100deg, #9b8cff 125deg, transparent 140deg); }
+
+.project + .project { border-top: 0; }
+
+/* Side index of the projects (Showcase): a beam with one node per project in its colour. Hidden until the showcase is
+   on screen (GSAP fades it in), and only on wide screens where the gutter beside the content has room for it. */
+.toc { position: fixed; left: 1.25rem; top: 50%; translate: 0 -50%; z-index: 40; opacity: 0; visibility: hidden; }
+@media (max-width: 1279px) { .toc { display: none; } }
+.toc ul { position: relative; display: grid; gap: 1.75rem; }
+.toc-track { position: absolute; left: 15px; top: 10px; bottom: 10px; width: 2px; border-radius: 2px; background: rgb(255 255 255 / .08); }
+.toc-fill { position: absolute; inset: 0; border-radius: inherit; transform-origin: top; box-shadow: 0 0 10px rgb(255 255 255 / .15); }
+.toc-item { display: flex; align-items: center; gap: .75rem; font-size: .8125rem; color: var(--color-ink-3); }
+.toc-node { position: relative; z-index: 1; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%;
+  background: var(--color-canvas); border: 1px solid rgb(255 255 255 / .1); color: var(--color-ink-3);
+  transition: color .3s ease, border-color .3s ease, box-shadow .3s ease, transform .3s var(--ease-out); }
+.toc-name { opacity: 0; transform: translateX(-6px); transition: opacity .3s ease, transform .3s var(--ease-out), color .3s ease; }
+.toc-item[aria-current] .toc-node { color: var(--accent); border-color: rgb(from var(--accent) r g b / .6);
+  box-shadow: 0 0 16px rgb(from var(--accent) r g b / .45); transform: scale(1.12); }
+.toc-item[aria-current] .toc-name { opacity: 1; transform: none; color: #fff; }
+.toc-item:focus-visible .toc-name { opacity: 1; transform: none; }
+@media (hover: hover) and (pointer: fine) {
+  .toc-item:hover .toc-node { color: var(--accent); border-color: rgb(from var(--accent) r g b / .4); }
+  .toc-item:hover .toc-name { opacity: 1; transform: none; color: #fff; }
+}
+@media (prefers-reduced-motion: reduce) { .toc-node, .toc-name { transition: none; } }
+
+/* Palco: the name is sized from the text column's width, so the longest one (ScreenShare) stays on one line next to
+   its icon; every project uses the same size so they match. ~6em is ScreenShare's width, 84px the icon and gap. */
+.p-text { container-type: inline-size; }
+.title-fit { font-size: clamp(2.25rem, calc((100cqi - 84px) / 6.2), 4.5rem); line-height: 1.05; }
