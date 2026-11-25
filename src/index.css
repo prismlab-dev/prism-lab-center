@@ -86,18 +86,17 @@ html { scroll-behavior: smooth; }
 @media (max-width: 767px) { .device { transform: rotateX(6deg); } .float { display: none; } }
 
 .team { transition: color .2s ease, background-color .2s ease; }
-.cta, .tool { transition: border-color .25s ease, background-color .25s ease, transform .15s var(--ease-out); }
+.tool { transition: border-color .25s ease, background-color .25s ease, transform .15s var(--ease-out); }
 .arrow { transition: transform .25s var(--ease-out); }
-.cta:active, .tool:active { transform: scale(.99); }
+.tool:active { transform: scale(.99); }
 @media (hover: hover) and (pointer: fine) {
   .team:hover { color: #fff; background-color: rgb(255 255 255 / .06); }
   .tool:hover { border-color: #3a3a40; background-color: var(--color-raised); }
-  .group:hover .arrow { transform: translate(2px, -2px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .arrow { transition: none; }
-  .cta:active, .tool:active { transform: none; }
+  .tool:active { transform: none; }
 }
 
 /* Prism (WebGL, see Prism): same box as the code field so both share pixel coordinates, running a little past the
@@ -128,3 +127,37 @@ html { scroll-behavior: smooth; }
 .code-dim .w[data-beam] { color: hsl(var(--b) 95% 70% / calc(var(--a, 1) * .8)); text-shadow: 0 0 8px hsl(var(--b) 100% 60% / calc(var(--a, 1) * .35)); }
 /* text-shadow off: --b keeps the hue of the last spectrum band the word sat in, which tinted the white light. */
 .code-dim .w[data-beam="w"] { color: rgb(255 255 255 / calc(var(--a, 1) * .28)); text-shadow: none; }
+
+/* Soft dark pool behind the name and the team, so the lit code under the pointer never fights the text.
+   isolation keeps the -1 layer above the code field instead of sinking under it. */
+.scrim { position: relative; isolation: isolate; }
+.scrim::before { content: ""; position: absolute; inset: -40% -10%; z-index: -1; pointer-events: none;
+  background: radial-gradient(closest-side, rgb(14 14 16 / .92), rgb(14 14 16 / .6) 60%, transparent); }
+
+/* Pointer over code already in the light: the band flares (fuller colour, wider glow) instead of doing nothing. */
+.code-dim .w[data-beam][data-on="1"] { color: hsl(var(--b) 100% 78%); text-shadow: 0 0 10px hsl(var(--b) 100% 60% / .6); }
+.code-dim .w[data-beam][data-on="2"] { color: hsl(var(--b) 100% 90%); text-shadow: 0 0 6px hsl(var(--b) 100% 70%), 0 0 18px hsl(var(--b) 100% 60% / .8); }
+.code-dim .w[data-beam="w"][data-on="1"] { color: rgb(255 255 255 / .6); text-shadow: 0 0 8px rgb(255 255 255 / .35); }
+.code-dim .w[data-beam="w"][data-on="2"] { color: #fff; text-shadow: 0 0 10px rgb(255 255 255 / .6); }
+
+/* CTA icon: a small nudge toward where the click goes, out to the corner or down into the download. */
+.cta-icon { transition: transform 250ms var(--ease-out); }
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .cta:hover .cta-icon { transform: translate(3px, -3px); }
+  .cta:hover .cta-dl { transform: translateY(3px); }
+}
+
+/* CTA prism (driven by GSAP in Project): --on fades the effects in, --ang turns the spectrum edge, --mx/--my/--h place
+   and tint the light under the pointer. */
+.cta::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; pointer-events: none; opacity: var(--on, 0);
+  background: conic-gradient(from var(--ang, 0deg), #ff2d55, #f7c04a, #bef264, #3dd6c3, #5cb8ff, #9b8cff, #ff2d55);
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+.cta { isolation: isolate; }
+.cta .spec { position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: var(--on, 0);
+  background: radial-gradient(90px circle at var(--mx, 50%) var(--my, 50%), hsl(var(--h, 0) 100% 65% / .3), hsl(var(--h, 0) 100% 65% / .12) 45%, transparent 100%); }
+/* Filled buttons: on hover the colour drains out into dark glass with a rim of it left, so the hue-shifting light
+   under the pointer reads the same as on the outlined ones; it pours back in when the pointer leaves. */
+.cta-solid { --k: calc((1 - var(--on, 0)) * 100%);
+  background: color-mix(in oklab, var(--fill) var(--k), #141416); color: color-mix(in oklab, #0e0e10 var(--k), var(--fill));
+  box-shadow: inset 0 0 0 1px rgb(from var(--fill) r g b / calc(var(--on, 0) * .45)); }
+.cta-ghost .spec { mix-blend-mode: normal; background: radial-gradient(90px circle at var(--mx, 50%) var(--my, 50%), hsl(var(--h, 0) 100% 65% / .22), hsl(var(--h, 0) 100% 65% / .09) 45%, transparent 100%); }

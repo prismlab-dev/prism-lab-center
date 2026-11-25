@@ -79,7 +79,7 @@ export default function App() {
           <CodeField />
           <Prism />
           <div className="hero-stage relative mx-auto flex min-h-[60svh] max-w-6xl flex-col items-center justify-center px-6 pb-32 text-center">
-            <div className="relative">
+            <div className="scrim relative">
               <h1 className="hero-title" aria-label="Prism Labs">
                 <span aria-hidden>Prism L<Atom className="atom-a" strokeWidth={1.6} />bs</span>
               </h1>
@@ -87,7 +87,7 @@ export default function App() {
                 <span key={g} className={`hero-title glitch ${g}`} aria-hidden>Prism L<Atom className="atom-a" strokeWidth={1.6} />bs</span>
               ))}
             </div>
-            <ul className="hero-names mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1" aria-label="Equipe">
+            <ul className="scrim hero-names mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1" aria-label="Equipe">
               {team.map((n, i) => <li key={n} className="name-item">{i > 0 && <span className="mr-4 text-ink-4" aria-hidden>·</span>}{n}</li>)}
             </ul>
           </div>

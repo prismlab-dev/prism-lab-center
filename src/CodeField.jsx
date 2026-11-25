@@ -1,48 +1,48 @@
 import { useEffect, useRef } from 'react'
 
-// Code from our own apps, drawn faintly across the whole hero. Dim by default; words near the pointer
+// Invented code on a light-and-optics theme (nothing from our real apps), drawn faintly across the whole hero. Dim by default; words near the pointer
 // light up white, and words inside the prism's beam take its colour.
-const code = `import { useMemo } from 'react'
-import { formatBRL } from './money'
+const code = `import { createLens } from './optics'
+import { mix, clamp } from './color'
 
-export function balancoDoMes(movs) {
-  const receitas = movs.filter((m) => m.valor > 0)
-  const despesas = movs.filter((m) => m.valor < 0)
-  return soma(receitas) + soma(despesas)
+export function refract(ray, glass) {
+  const n = glass.index ?? 1.52
+  const angle = Math.asin(Math.sin(ray.angle) / n)
+  return { ...ray, angle, speed: ray.speed / n }
 }
 
-const categorias = ['Moradia', 'Cartão', 'Metas']
-const cores = { moradia: '#5cb8ff', cartao: '#9b8cff' }
+const spectrum = ['red', 'orange', 'yellow', 'green', 'blue', 'violet']
+const bands = { red: 700, green: 530, blue: 470, violet: 400 }
 
-export default function Hoje({ tarefas }) {
-  const pendentes = tarefas.filter((t) => !t.feita)
-  return <Lista itens={pendentes} vazio="Nada pra hoje" />
+export default function Lab({ experiments }) {
+  const running = experiments.filter((e) => e.active)
+  return <Bench items={running} empty="Bancada livre" />
 }
 
-async function iniciarPomodoro(minutos = 25) {
-  const fim = Date.now() + minutos * 60_000
-  while (Date.now() < fim) await tick(1000)
-  notificar('Pausa de 5 minutos')
+async function warmUp(lamp, seconds = 3) {
+  const until = Date.now() + seconds * 1000
+  while (Date.now() < until) await lamp.step(16)
+  lamp.emit('ready')
 }
 
-const peer = new RTCPeerConnection({ iceServers })
-peer.addTrack(stream.getVideoTracks()[0], stream)
-const oferta = await peer.createOffer()
-await peer.setLocalDescription(oferta)
-socket.emit('sinal', { sala, oferta })
+const beam = new Beam({ width: 2, color: 'white' })
+beam.through(prism).split(spectrum.length)
+const rays = beam.rays.map((r) => refract(r, prism))
+for (const r of rays) canvas.draw(r)
+log('dispersão', rays.length)
 
-export const tema = createTheme({
-  iris: '#9b8cff', lagoon: '#3dd6c3',
-  azure: '#5cb8ff', coral: '#ff7b8a',
+export const palette = defineTokens({
+  light: '#ffffff', shadow: '#0e0e10',
+  glow: mix('#ffffff', '#9b8cff', 0.2),
 })
 
-function parcela(total, n, i) {
-  return Math.round((total / n) * 100) / 100
+function wavelength(t, min = 380, max = 750) {
+  return clamp(min + (max - min) * t, min, max)
 }
 
-export async function lancar(projetos) {
-  for (const p of projetos) await deploy(p)
-  return projetos.length
+export async function ship(ideas) {
+  for (const idea of ideas) await build(idea)
+  return ideas.length
 }`
 
 // One continuous stream of statements, wrapped into long rows that run past both edges, so the
